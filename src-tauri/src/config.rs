@@ -76,7 +76,7 @@ impl AppConfig {
     pub fn resolve_llama_binary(&self) -> Result<PathBuf, String> {
         let raw = self.llama_cpp_path.trim();
         if raw.is_empty() {
-            return Err("Путь к llama.cpp не задан".into());
+            return Err("llama.cpp path is not set".into());
         }
         let path = PathBuf::from(raw);
         if path.is_file() {
@@ -92,11 +92,11 @@ impl AppConfig {
                 return Ok(candidate);
             }
             return Err(format!(
-                "В папке {} не найден llama-server.exe",
+                "llama-server.exe not found in {}",
                 path.display()
             ));
         }
-        Err(format!("Путь к llama.cpp не существует: {raw}"))
+        Err(format!("llama.cpp path does not exist: {raw}"))
     }
 }
 
@@ -111,19 +111,19 @@ pub fn load_config(app_data_dir: &Path) -> Result<AppConfig, String> {
         save_config(app_data_dir, &cfg)?;
         return Ok(cfg);
     }
-    let data = fs::read_to_string(&path).map_err(|e| format!("Не удалось прочитать конфиг: {e}"))?;
+    let data = fs::read_to_string(&path).map_err(|e| format!("Failed to read config: {e}"))?;
     let cfg: AppConfig =
-        serde_json::from_str(&data).map_err(|e| format!("Некорректный конфиг: {e}"))?;
+        serde_json::from_str(&data).map_err(|e| format!("Invalid config: {e}"))?;
     Ok(cfg.migrate())
 }
 
 pub fn save_config(app_data_dir: &Path, config: &AppConfig) -> Result<(), String> {
     fs::create_dir_all(app_data_dir)
-        .map_err(|e| format!("Не удалось создать каталог данных: {e}"))?;
+        .map_err(|e| format!("Failed to create data directory: {e}"))?;
     let path = config_path(app_data_dir);
     let data = serde_json::to_string_pretty(config)
-        .map_err(|e| format!("Не удалось сериализовать конфиг: {e}"))?;
-    fs::write(&path, data).map_err(|e| format!("Не удалось сохранить конфиг: {e}"))?;
+        .map_err(|e| format!("Failed to serialize config: {e}"))?;
+    fs::write(&path, data).map_err(|e| format!("Failed to save config: {e}"))?;
     Ok(())
 }
 

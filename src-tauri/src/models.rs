@@ -21,7 +21,7 @@ pub fn scan_models(models_dir: &str) -> Result<Vec<ModelEntry>, String> {
         return Ok(Vec::new());
     }
     if !root.is_dir() {
-        return Err(format!("Каталог моделей не найден: {}", root.display()));
+        return Err(format!("Models directory not found: {}", root.display()));
     }
 
     let mut entries = Vec::new();
@@ -58,7 +58,7 @@ pub fn scan_models(models_dir: &str) -> Result<Vec<ModelEntry>, String> {
             .split('/')
             .next()
             .filter(|s| !s.is_empty() && relative.contains('/'))
-            .unwrap_or("(корень)")
+            .unwrap_or("(root)")
             .to_string();
 
         entries.push(ModelEntry {

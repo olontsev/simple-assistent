@@ -1,23 +1,23 @@
-# Simple Assistant
-
-Менеджер **llama.cpp** (`llama-server`) в системном трее на Tauri + React + TypeScript.
+Simple manager **llama.cpp** (`llama-server`) in the system tray on Tauri + React + TypeScript.
 
 ## Запуск
 
-```bash
+```Launch
 npm install
 npm run tauri dev
 ```
 
-При старте окно скрыто — приложение живёт в трее. Левый клик по иконке или пункт «Настройки» открывает окно.
+```Build
+npm run tauri build
+```
+
+At startup, the window is hidden - the application lives in the tray. Left click on the icon or the “Settings” item opens a window.
 
 ## Возможности
 
-- Запуск / остановка `llama-server`
-- Загрузка / выгрузка модели (через перезапуск процесса)
-- Выбор модели (рекурсивный скан `.gguf`) и профиля в меню трея
-- Настройки: пути, автозапуск с Windows, редактор профилей (строка аргументов)
-- Иконка трея отражает статус сервера (серый / жёлтый / зелёный / красный)
+- Fast Start/Stop llama-server
+- Loading/unloading model
+- Selecting a model (recursive scan .gguf) and profile in the tray menu
+- Settings: paths, autorun with Windows, profile editor (argument string)
+- The tray icon reflects the server status (gray / yellow / green / red)
 
-Конфиг: `%APPDATA%\com.ryuky.simple-assistant\settings.json`  
-Лог сервера: `%APPDATA%\com.ryuky.simple-assistant\llama-server.log`

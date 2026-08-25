@@ -32,7 +32,7 @@ pub fn split_args(input: &str) -> Result<Vec<String>, String> {
     }
 
     if in_quotes {
-        return Err("Незакрытая кавычка в аргументах профиля".into());
+        return Err("Unclosed quote in profile arguments".into());
     }
     if !current.is_empty() {
         args.push(current);
@@ -52,7 +52,7 @@ pub fn validate_profile_args(args: &str) -> Result<(), String> {
             || bare.starts_with("--alias=")
         {
             return Err(
-                "Профиль не должен содержать -m / --model / --alias — модель выбирается отдельно"
+                "Profile must not contain -m / --model / --alias — select the model separately"
                     .into(),
             );
         }

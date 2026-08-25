@@ -39,6 +39,22 @@ pub fn refresh_ui(app: &AppHandle) -> Result<(), String> {
     Ok(())
 }
 
+/// Rescan .gguf files and rebuild the tray menu (call before menu is shown).
+pub fn refresh_models_for_menu(app: &AppHandle) -> Result<(), String> {
+    let state = app.state::<AppState>();
+    let models = refresh_models(&state)?;
+    let config = state.config.lock().map_err(|e| e.to_string())?.clone();
+    let status = app
+        .state::<SharedServer>()
+        .lock()
+        .map_err(|e| e.to_string())?
+        .status();
+
+    tray::rebuild_tray(app, &config, &models, &status).map_err(|e| e.to_string())?;
+    tray::emit_models(app, &models);
+    Ok(())
+}
+
 pub fn handle_tray_menu(app: &AppHandle, id: &str) {
     let result = match id {
         "start" => cmd_start_server(app.clone()),
@@ -90,7 +106,7 @@ fn set_active_profile_inner(app: &AppHandle, profile_id: String) -> Result<(), S
     {
         let mut config = state.config.lock().map_err(|e| e.to_string())?;
         if !config.profiles.iter().any(|p| p.id == profile_id) {
-            return Err("Профиль не найден".into());
+            return Err("Profile not found".into());
         }
         config.active_profile_id = profile_id;
         config::save_config(&state.app_data_dir, &config)?;
@@ -148,7 +164,7 @@ pub fn upsert_profile(
 ) -> Result<AppConfig, String> {
     validate_profile_args(&input.args)?;
     if input.name.trim().is_empty() {
-        return Err("Имя профиля не может быть пустым".into());
+        return Err("Profile name cannot be empty".into());
     }
 
     {
@@ -158,7 +174,7 @@ pub fn upsert_profile(
                 .profiles
                 .iter_mut()
                 .find(|p| &p.id == id)
-                .ok_or_else(|| "Профиль не найден".to_string())?;
+                .ok_or_else(|| "Profile not found".to_string())?;
             profile.name = input.name;
             profile.args = input.args;
         } else {
@@ -187,7 +203,7 @@ pub fn delete_profile(
     {
         let mut config = state.config.lock().map_err(|e| e.to_string())?;
         if config.profiles.len() <= 1 {
-            return Err("Нельзя удалить последний профиль".into());
+            return Err("Cannot delete the last profile".into());
         }
         config.profiles.retain(|p| p.id != profile_id);
         if config.active_profile_id == profile_id {
@@ -303,7 +319,7 @@ fn cmd_load_model(app: AppHandle) -> Result<(), String> {
     let server = app.state::<SharedServer>();
     let config = state.config.lock().map_err(|e| e.to_string())?.clone();
     if config.active_model_path.is_none() {
-        return Err("Модель не выбрана".into());
+        return Err("No model selected".into());
     }
     {
         let mut mgr = server.lock().map_err(|e| e.to_string())?;
@@ -312,7 +328,7 @@ fn cmd_load_model(app: AppHandle) -> Result<(), String> {
             phase,
             ServerPhase::RunningEmpty | ServerPhase::RunningLoaded | ServerPhase::Starting
         ) {
-            return Err("Сначала запустите сервер".into());
+            return Err("Start the server first".into());
         }
         mgr.restart(&config, &state.app_data_dir, true)?;
     }
@@ -326,7 +342,7 @@ fn cmd_unload_model(app: AppHandle) -> Result<(), String> {
     {
         let mut mgr = server.lock().map_err(|e| e.to_string())?;
         if mgr.status().phase != ServerPhase::RunningLoaded {
-            return Err("Модель не загружена".into());
+            return Err("Model is not loaded".into());
         }
         mgr.restart(&config, &state.app_data_dir, false)?;
     }

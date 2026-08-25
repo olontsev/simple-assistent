@@ -84,13 +84,13 @@ impl ServerManager {
         let path = Self::log_path(app_data_dir);
         if let Some(parent) = path.parent() {
             std::fs::create_dir_all(parent)
-                .map_err(|e| format!("Не удалось создать каталог логов: {e}"))?;
+                .map_err(|e| format!("Failed to create log directory: {e}"))?;
         }
         let mut header = OpenOptions::new()
             .create(true)
             .append(true)
             .open(&path)
-            .map_err(|e| format!("Не удалось открыть лог: {e}"))?;
+            .map_err(|e| format!("Failed to open log: {e}"))?;
         let _ = writeln!(
             header,
             "\n===== {} =====",
@@ -102,12 +102,12 @@ impl ServerManager {
             .create(true)
             .append(true)
             .open(&path)
-            .map_err(|e| format!("Не удалось открыть лог (stdout): {e}"))?;
+            .map_err(|e| format!("Failed to open log (stdout): {e}"))?;
         let stderr = OpenOptions::new()
             .create(true)
             .append(true)
             .open(&path)
-            .map_err(|e| format!("Не удалось открыть лог (stderr): {e}"))?;
+            .map_err(|e| format!("Failed to open log (stderr): {e}"))?;
         Ok((Stdio::from(stdout), Stdio::from(stderr)))
     }
 
@@ -121,13 +121,13 @@ impl ServerManager {
             self.status.phase,
             ServerPhase::Starting | ServerPhase::RunningEmpty | ServerPhase::RunningLoaded
         ) {
-            return Err("Сервер уже запущен или запускается".into());
+            return Err("Server is already running or starting".into());
         }
 
         let binary = config.resolve_llama_binary()?;
         let profile = config
             .active_profile()
-            .ok_or_else(|| "Нет активного профиля".to_string())?;
+            .ok_or_else(|| "No active profile".to_string())?;
         validate_profile_args(&profile.args)?;
         let profile_args = split_args(&profile.args)?;
 
@@ -135,9 +135,9 @@ impl ServerManager {
             let path = config
                 .active_model_path
                 .as_ref()
-                .ok_or_else(|| "Модель не выбрана".to_string())?;
+                .ok_or_else(|| "No model selected".to_string())?;
             if !Path::new(path).is_file() {
-                return Err(format!("Файл модели не найден: {path}"));
+                return Err(format!("Model file not found: {path}"));
             }
             Some(path.clone())
         } else {
@@ -180,7 +180,7 @@ impl ServerManager {
 
         let child = cmd
             .spawn()
-            .map_err(|e| format!("Не удалось запустить llama-server: {e}"))?;
+            .map_err(|e| format!("Failed to start llama-server: {e}"))?;
 
         let pid = child.id();
         self.child = Some(child);
@@ -238,12 +238,12 @@ impl ServerManager {
                     self.status.pid = None;
                     self.status.loaded_model = None;
                     self.status.last_error =
-                        Some(format!("Процесс llama-server завершился (код {code})"));
+                        Some(format!("llama-server process exited (code {code})"));
                     return;
                 }
                 Ok(None) => {}
                 Err(e) => {
-                    self.status.last_error = Some(format!("Ошибка проверки процесса: {e}"));
+                    self.status.last_error = Some(format!("Process check error: {e}"));
                 }
             }
         } else if matches!(
@@ -251,7 +251,7 @@ impl ServerManager {
             ServerPhase::Starting | ServerPhase::RunningEmpty | ServerPhase::RunningLoaded
         ) {
             self.status.phase = ServerPhase::Error;
-            self.status.last_error = Some("Процесс потерян".into());
+            self.status.last_error = Some("Process lost".into());
             return;
         }
 
@@ -285,7 +285,7 @@ impl ServerManager {
                         if started.elapsed() > Duration::from_secs(120) {
                             self.status.phase = ServerPhase::Error;
                             self.status.last_error =
-                                Some("Таймаут ожидания /health (120 с)".into());
+                                Some("/health wait timeout (120s)".into());
                             let _ = self.stop_keep_error();
                         }
                     }

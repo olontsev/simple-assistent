@@ -3,6 +3,7 @@ import { open } from "@tauri-apps/plugin-dialog";
 import {
   phaseColor,
   phaseLabel,
+  subscribeModelsEvents,
   subscribeStatusEvents,
   useAppStore,
   type Profile,
@@ -82,7 +83,7 @@ function ServerControls() {
         onClick={() => run(startServer)}
         className="btn-primary"
       >
-        Запустить
+        Start
       </button>
       <button
         type="button"
@@ -90,7 +91,7 @@ function ServerControls() {
         onClick={() => run(stopServer)}
         className="btn-secondary"
       >
-        Остановить
+        Stop
       </button>
       <button
         type="button"
@@ -98,7 +99,7 @@ function ServerControls() {
         onClick={() => run(loadModel)}
         className="btn-secondary"
       >
-        Загрузить модель
+        Load model
       </button>
       <button
         type="button"
@@ -106,7 +107,7 @@ function ServerControls() {
         onClick={() => run(unloadModel)}
         className="btn-secondary"
       >
-        Выгрузить
+        Unload
       </button>
     </div>
   );
@@ -169,9 +170,9 @@ function PathsSection() {
 
   return (
     <section className="card">
-      <h2 className="card-title">Пути и автозапуск</h2>
+      <h2 className="card-title">Paths and autostart</h2>
       <label className="field">
-        <span>llama.cpp (llama-server.exe или папка)</span>
+        <span>llama.cpp (llama-server.exe or folder)</span>
         <div className="flex gap-2">
           <input
             className="input flex-1"
@@ -180,15 +181,15 @@ function PathsSection() {
             placeholder="C:/AI/llamacpp/llama-server.exe"
           />
           <button type="button" className="btn-secondary" onClick={pickLlama}>
-            Файл…
+            File…
           </button>
           <button type="button" className="btn-secondary" onClick={pickLlamaDir}>
-            Папка…
+            Folder…
           </button>
         </div>
       </label>
       <label className="field">
-        <span>Каталог моделей (.gguf)</span>
+        <span>Models directory (.gguf)</span>
         <div className="flex gap-2">
           <input
             className="input flex-1"
@@ -197,7 +198,7 @@ function PathsSection() {
             placeholder="C:/AI/LM Models"
           />
           <button type="button" className="btn-secondary" onClick={pickModels}>
-            Обзор…
+            Browse…
           </button>
         </div>
       </label>
@@ -208,7 +209,7 @@ function PathsSection() {
           onChange={(e) => setAutostart(e.target.checked)}
           className="h-4 w-4 rounded border-zinc-300"
         />
-        Запускать приложение при старте Windows
+        Launch app when Windows starts
       </label>
       <div className="mt-3 flex items-center gap-3">
         <button
@@ -217,10 +218,10 @@ function PathsSection() {
           disabled={saving}
           onClick={onSave}
         >
-          {saving ? "Сохранение…" : "Сохранить"}
+          {saving ? "Saving…" : "Save"}
         </button>
         {saved ? (
-          <span className="text-sm text-emerald-600">Сохранено</span>
+          <span className="text-sm text-emerald-600">Saved</span>
         ) : null}
       </div>
     </section>
@@ -269,7 +270,7 @@ function ProfilesSection() {
     setBusy(true);
     try {
       await upsertProfile({
-        name: "Новый профиль",
+        name: "New profile",
         args: "-ngl 99 --host 0.0.0.0 --port 8080",
       });
     } catch {
@@ -281,7 +282,7 @@ function ProfilesSection() {
 
   async function onDelete() {
     if (!selected) return;
-    if (!confirm(`Удалить профиль «${selected.name}»?`)) return;
+    if (!confirm(`Delete profile “${selected.name}”?`)) return;
     setBusy(true);
     try {
       await deleteProfile(selected.id);
@@ -306,12 +307,12 @@ function ProfilesSection() {
 
   return (
     <section className="card">
-      <h2 className="card-title">Профили запуска</h2>
+      <h2 className="card-title">Launch profiles</h2>
       <p className="mb-3 text-sm text-zinc-500">
-        Только аргументы сервера. Путь к модели и{" "}
-        <code className="text-xs">--alias</code> задаются выбором модели в
-        трее — не добавляйте <code className="text-xs">-m</code> /{" "}
-        <code className="text-xs">--alias</code> сюда.
+        Server arguments only. Model path and{" "}
+        <code className="text-xs">--alias</code> come from the tray Model
+        menu — do not add <code className="text-xs">-m</code> /{" "}
+        <code className="text-xs">--alias</code> here.
       </p>
       <div className="flex gap-4">
         <div className="w-48 shrink-0 space-y-1">
@@ -338,13 +339,13 @@ function ProfilesSection() {
             disabled={busy}
             onClick={onAdd}
           >
-            + Добавить
+            + Add
           </button>
         </div>
         {selected ? (
           <div className="min-w-0 flex-1 space-y-3">
             <label className="field">
-              <span>Имя</span>
+              <span>Name</span>
               <input
                 className="input"
                 value={name}
@@ -352,7 +353,7 @@ function ProfilesSection() {
               />
             </label>
             <label className="field">
-              <span>Аргументы</span>
+              <span>Arguments</span>
               <textarea
                 className="input min-h-36 font-mono text-xs"
                 value={args}
@@ -367,7 +368,7 @@ function ProfilesSection() {
                 disabled={busy}
                 onClick={onSave}
               >
-                Сохранить профиль
+                Save profile
               </button>
               <button
                 type="button"
@@ -375,7 +376,7 @@ function ProfilesSection() {
                 disabled={busy || selected.id === config.activeProfileId}
                 onClick={onActivate}
               >
-                Сделать активным
+                Set active
               </button>
               <button
                 type="button"
@@ -383,7 +384,7 @@ function ProfilesSection() {
                 disabled={busy || config.profiles.length <= 1}
                 onClick={onDelete}
               >
-                Удалить
+                Delete
               </button>
             </div>
           </div>
@@ -400,22 +401,22 @@ function ModelsHint() {
 
   return (
     <section className="card">
-      <h2 className="card-title">Модели</h2>
+      <h2 className="card-title">Models</h2>
       <p className="mb-2 text-sm text-zinc-500">
-        Список строится рекурсивным сканом каталога. Выбор — в меню трея
-        «Модель».
+        List is built by recursively scanning the models folder. Selection is
+        in the tray “Model” menu.
       </p>
       {active ? (
         <p className="mb-2 text-sm text-zinc-700 dark:text-zinc-300">
-          Активная:{" "}
+          Active:{" "}
           <span className="font-mono text-xs">{active}</span>
         </p>
       ) : (
-        <p className="mb-2 text-sm text-zinc-500">Модель не выбрана</p>
+        <p className="mb-2 text-sm text-zinc-500">No model selected</p>
       )}
       <div className="max-h-40 overflow-auto rounded border border-zinc-200 dark:border-zinc-700">
         {models.length === 0 ? (
-          <div className="p-3 text-sm text-zinc-500">Нет .gguf файлов</div>
+          <div className="p-3 text-sm text-zinc-500">No .gguf files found</div>
         ) : (
           <ul className="divide-y divide-zinc-100 text-sm dark:divide-zinc-800">
             {models.map((m) => (
@@ -444,19 +445,18 @@ function App() {
 
   useEffect(() => {
     loadAll();
-    let unlisten: (() => void) | undefined;
-    subscribeStatusEvents().then((fn) => {
-      unlisten = fn;
-    });
+    const unsubs: Array<() => void> = [];
+    subscribeStatusEvents().then((fn) => unsubs.push(fn));
+    subscribeModelsEvents().then((fn) => unsubs.push(fn));
     return () => {
-      unlisten?.();
+      unsubs.forEach((fn) => fn());
     };
   }, [loadAll]);
 
   if (loading) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-zinc-50 text-zinc-600 dark:bg-zinc-950 dark:text-zinc-300">
-        Загрузка…
+        Loading…
       </main>
     );
   }
@@ -468,7 +468,7 @@ function App() {
           Simple Assistant
         </h1>
         <p className="text-sm text-zinc-500">
-          Управление llama.cpp · настройки и профили
+          llama.cpp manager · settings and profiles
         </p>
       </header>
 

@@ -219,18 +219,24 @@ export async function subscribeStatusEvents() {
   });
 }
 
+export async function subscribeModelsEvents() {
+  return listen<ModelEntry[]>("app://models", (event) => {
+    useAppStore.setState({ models: event.payload });
+  });
+}
+
 export function phaseLabel(phase: ServerPhase): string {
   switch (phase) {
     case "stopped":
-      return "Остановлен";
+      return "Stopped";
     case "starting":
-      return "Запуск…";
+      return "Starting…";
     case "runningEmpty":
-      return "Работает (без модели)";
+      return "Running (no model)";
     case "runningLoaded":
-      return "Работает";
+      return "Running";
     case "error":
-      return "Ошибка";
+      return "Error";
   }
 }
 

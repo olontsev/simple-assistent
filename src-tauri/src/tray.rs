@@ -22,11 +22,11 @@ impl Default for TrayState {
 
 fn phase_label(phase: ServerPhase) -> &'static str {
     match phase {
-        ServerPhase::Stopped => "Сервер: остановлен",
-        ServerPhase::Starting => "Сервер: запуск…",
-        ServerPhase::RunningEmpty => "Сервер: работает (без модели)",
-        ServerPhase::RunningLoaded => "Сервер: работает",
-        ServerPhase::Error => "Сервер: ошибка",
+        ServerPhase::Stopped => "Server: stopped",
+        ServerPhase::Starting => "Server: starting…",
+        ServerPhase::RunningEmpty => "Server: running (no model)",
+        ServerPhase::RunningLoaded => "Server: running",
+        ServerPhase::Error => "Server: error",
     }
 }
 
@@ -84,6 +84,7 @@ fn status_icon(phase: ServerPhase) -> Image<'static> {
 }
 
 pub fn show_settings_window(app: &AppHandle) {
+    let _ = crate::commands::refresh_models_for_menu(app);
     if let Some(win) = app.get_webview_window("main") {
         let _ = win.set_skip_taskbar(false);
         let _ = win.show();
@@ -121,10 +122,10 @@ pub fn build_menu(
         can_stop && config.active_model_path.is_some() && status.phase != ServerPhase::Starting;
     let can_unload = matches!(status.phase, ServerPhase::RunningLoaded);
 
-    let start = MenuItem::with_id(app, "start", "Запустить", can_start, None::<&str>)?;
-    let stop = MenuItem::with_id(app, "stop", "Остановить", can_stop, None::<&str>)?;
-    let load = MenuItem::with_id(app, "load", "Загрузить модель", can_load, None::<&str>)?;
-    let unload = MenuItem::with_id(app, "unload", "Выгрузить модель", can_unload, None::<&str>)?;
+    let start = MenuItem::with_id(app, "start", "Start", can_start, None::<&str>)?;
+    let stop = MenuItem::with_id(app, "stop", "Stop", can_stop, None::<&str>)?;
+    let load = MenuItem::with_id(app, "load", "Load model", can_load, None::<&str>)?;
+    let unload = MenuItem::with_id(app, "unload", "Unload model", can_unload, None::<&str>)?;
 
     let mut groups: BTreeMap<String, Vec<&ModelEntry>> = BTreeMap::new();
     for m in models {
@@ -135,12 +136,12 @@ pub fn build_menu(
         let empty = MenuItem::with_id(
             app,
             "models_empty",
-            "(нет моделей — укажите каталог)",
+            "(no models — set models folder)",
             false,
             None::<&str>,
         )?;
-        Submenu::with_items(app, "Модель", true, &[&empty])?
-    } else if groups.len() == 1 && groups.keys().next().map(|k| k.as_str()) == Some("(корень)") {
+        Submenu::with_items(app, "Model", true, &[&empty])?
+    } else if groups.len() == 1 && groups.keys().next().map(|k| k.as_str()) == Some("(root)") {
         let items: Vec<CheckMenuItem<tauri::Wry>> = models
             .iter()
             .map(|m| {
@@ -162,7 +163,7 @@ pub fn build_menu(
             .collect();
         let refs: Vec<&dyn IsMenuItem<tauri::Wry>> =
             items.iter().map(|i| i as &dyn IsMenuItem<tauri::Wry>).collect();
-        Submenu::with_items(app, "Модель", true, &refs)?
+        Submenu::with_items(app, "Model", true, &refs)?
     } else {
         let mut submenus: Vec<Submenu<tauri::Wry>> = Vec::new();
         for (group, entries) in &groups {
@@ -174,7 +175,7 @@ pub fn build_menu(
                         .as_ref()
                         .map(|p| p == &m.path)
                         .unwrap_or(false);
-                    let label = if group.as_str() == "(корень)" {
+                    let label = if group.as_str() == "(root)" {
                         m.name.clone()
                     } else {
                         m.relative_path
@@ -201,7 +202,7 @@ pub fn build_menu(
             .iter()
             .map(|s| s as &dyn IsMenuItem<tauri::Wry>)
             .collect();
-        Submenu::with_items(app, "Модель", true, &refs)?
+        Submenu::with_items(app, "Model", true, &refs)?
     };
 
     let profile_items: Vec<CheckMenuItem<tauri::Wry>> = config
@@ -226,17 +227,17 @@ pub fn build_menu(
         .collect();
     let profile_submenu = if profile_refs.is_empty() {
         let empty =
-            MenuItem::with_id(app, "profiles_empty", "(нет профилей)", false, None::<&str>)?;
-        Submenu::with_items(app, "Профиль", true, &[&empty])?
+            MenuItem::with_id(app, "profiles_empty", "(no profiles)", false, None::<&str>)?;
+        Submenu::with_items(app, "Profile", true, &[&empty])?
     } else {
-        Submenu::with_items(app, "Профиль", true, &profile_refs)?
+        Submenu::with_items(app, "Profile", true, &profile_refs)?
     };
 
     let sep1 = PredefinedMenuItem::separator(app)?;
     let sep2 = PredefinedMenuItem::separator(app)?;
     let sep3 = PredefinedMenuItem::separator(app)?;
-    let settings = MenuItem::with_id(app, "settings", "Настройки", true, None::<&str>)?;
-    let quit = MenuItem::with_id(app, "quit", "Выход", true, None::<&str>)?;
+    let settings = MenuItem::with_id(app, "settings", "Settings", true, None::<&str>)?;
+    let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
 
     Menu::with_items(
         app,
@@ -284,13 +285,22 @@ pub fn rebuild_tray(
                 crate::commands::handle_tray_menu(app, event.id.as_ref());
             })
             .on_tray_icon_event(|tray, event| {
-                if let TrayIconEvent::Click {
-                    button: MouseButton::Left,
-                    button_state: MouseButtonState::Up,
-                    ..
-                } = event
-                {
-                    show_settings_window(tray.app_handle());
+                match event {
+                    TrayIconEvent::Click {
+                        button: MouseButton::Right,
+                        button_state: MouseButtonState::Down,
+                        ..
+                    } => {
+                        let _ = crate::commands::refresh_models_for_menu(tray.app_handle());
+                    }
+                    TrayIconEvent::Click {
+                        button: MouseButton::Left,
+                        button_state: MouseButtonState::Up,
+                        ..
+                    } => {
+                        show_settings_window(tray.app_handle());
+                    }
+                    _ => {}
                 }
             })
             .build(app)?;
@@ -301,4 +311,8 @@ pub fn rebuild_tray(
 
 pub fn emit_status(app: &AppHandle, status: &ServerStatus) {
     let _ = app.emit("app://status", status);
+}
+
+pub fn emit_models(app: &AppHandle, models: &[ModelEntry]) {
+    let _ = app.emit("app://models", models);
 }
