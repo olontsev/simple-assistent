@@ -1,19 +1,21 @@
 Simple manager **llama.cpp** (`llama-server`) in the system tray on Tauri + React + TypeScript.
 
-## Запуск
+## Launch
 
-```Launch
+```
 npm install
 npm run tauri dev
 ```
 
-```Build
+## Build
+
+```
 npm run tauri build
 ```
 
 At startup, the window is hidden - the application lives in the tray. Left click on the icon or the “Settings” item opens a window.
 
-## Возможности
+## Features
 
 - Fast Start/Stop llama-server
 - Loading/unloading model
